@@ -44,8 +44,8 @@ li {
   border-width: 0px;
   border-radius: 5px;
   padding: 5px;
-  padding-left: 5px;
-  padding-right: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
   cursor: pointer;
 }
 
