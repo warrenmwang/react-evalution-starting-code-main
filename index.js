@@ -21,8 +21,6 @@ const API = (() => {
   };
 
   const addToCart = (cartItem) => {
-    console.log("addToCart: ", JSON.stringify(cartItem));
-
     // define your method to add an item to cart
     return fetch(`${URL}/cart`, {
       method: "POST",
@@ -149,7 +147,7 @@ const View = (() => {
       const removeBtn = createBtn();
       removeBtn.innerText = "-";
       removeBtn.id = `remove-${item}`;
-      removeBtn.class = `btn__red`;
+      removeBtn.className = `btn btn__red`;
 
       const spanCounter = document.createElement("span");
       spanCounter.innerText = `${count}`;
@@ -158,12 +156,12 @@ const View = (() => {
       const addBtn = createBtn();
       addBtn.innerText = "+";
       addBtn.id = `add-${item}`;
-      addBtn.class = `btn__green`;
+      addBtn.className = `btn btn__green`;
 
       const addToCartBtn = createBtn();
       addToCartBtn.innerText = "add to cart";
       addToCartBtn.id = `save-${item}`;
-      addToCartBtn.class = `btn__blue`;
+      addToCartBtn.className = `btn btn__blue`;
 
       listItem.appendChild(spanItem);
       listItem.appendChild(removeBtn);
@@ -188,7 +186,7 @@ const View = (() => {
       const deleteBtn = document.createElement("button");
       deleteBtn.innerText = "delete";
       deleteBtn.id = `delete-${item.content}`;
-      deleteBtn.class = `btn__blue`;
+      deleteBtn.className = `btn btn__blue`;
 
       listItem.appendChild(span);
       listItem.appendChild(deleteBtn);
@@ -216,8 +214,6 @@ const Controller = ((model, view) => {
 
     // fetch inventory data
     model.getInventory().then((data) => {
-      console.log("model get", data);
-
       // save inventory data
       const tmp = [];
       data.forEach((item) => {
@@ -226,8 +222,6 @@ const Controller = ((model, view) => {
           count: 0,
         });
       });
-      console.log("tmp", tmp);
-
       state.inventory = tmp;
     });
 
@@ -294,26 +288,18 @@ const Controller = ((model, view) => {
   const handleAddToCart = (inventoryIndex) => {
     //  just update cart in state, callback will automatically sync with db.
     const itemName = state.inventory[inventoryIndex].content;
-    console.log(itemName);
     const cartIndex = state.cart.findIndex((item) => item.content === itemName);
-
-    console.log(cartIndex);
 
     if (cartIndex === -1) {
       // not in cart yet
       // add inventory count to cart count for this item
-      console.log("inventoryIndex: " + inventoryIndex);
       const itemPtr = state.inventory[inventoryIndex];
-      console.log("itemPtr " + JSON.stringify(itemPtr));
       // const newItem = Object.create(itemPtr); // shallow copy
       const newItem = {
         ...itemPtr,
       };
-      console.log("newItem " + JSON.stringify(newItem));
       state.cart.push(newItem);
       state.cart = state.cart; // trigger callback (view)
-
-      console.log("handleAddToCart", JSON.stringify(newItem));
 
       // add to DB
       model.addToCart(newItem);
@@ -331,49 +317,40 @@ const Controller = ((model, view) => {
 
   const handleCartEvents = () => {
     // setup event listener on cart wrapper
-    const cartWrapper = document
-      .querySelector(".cart-wrapper")
-      .addEventListener("click", (e) => {
-        const element = e.target;
+    document.querySelector(".cart-wrapper").addEventListener("click", (e) => {
+      const element = e.target;
 
-        if (element.nodeName !== "BUTTON") {
-          return;
-        }
+      if (element.nodeName !== "BUTTON") {
+        return;
+      }
 
-        console.log(element);
+      const tmp = element.id.split("-");
+      if (tmp.length === 1) {
+        // checkout button
+        // clear cart and sync with db
+        state.cart = [];
+        model.checkout();
+        return;
+      }
 
-        const tmp = element.id.split("-");
-        console.log(tmp);
-        if (tmp.length === 1) {
-          // checkout button
-          // clear cart and sync with db
-          state.cart = [];
-          model.checkout();
-          return;
-        }
+      // delete button
+      // delete just the item from db
+      const itemName = tmp[1];
 
-        // delete button
-        // delete just the item from db
-        const itemName = tmp[1];
-        console.log(`deleting ${itemName}`);
+      // find id (in hindsight, should have used id in the id attribute.)
+      const cartItemIndex = state.cart.findIndex(
+        (item) => item.content === itemName
+      );
+      const cartItemId = state.cart[cartItemIndex].id;
+      // update state (and view)
+      state.cart.splice(cartItemIndex, 1);
+      state.cart = state.cart; // trigger view callback
 
-        // find id (in hindsight, should have used id in the id attribute.)
-        const cartItemIndex = state.cart.findIndex(
-          (item) => item.content === itemName
-        );
-        const cartItemId = state.cart[cartItemIndex].id;
-        // update state (and view)
-        state.cart.splice(cartItemIndex, 1);
-        state.cart = state.cart; // trigger view callback
-
-        // update db
-        model.deleteFromCart(cartItemId);
-      });
+      // update db
+      model.deleteFromCart(cartItemId);
+    });
   };
 
-  const handleDelete = () => {};
-
-  const handleCheckout = () => {};
   const bootstrap = () => {
     init();
     handleInventoryEvents();

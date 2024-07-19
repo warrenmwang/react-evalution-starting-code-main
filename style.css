@@ -1,0 +1,79 @@
+#app {
+  display: flex;
+  justify-content: space-around;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgb(248, 248, 234);
+}
+
+h1 {
+  text-align: center;
+}
+
+.container-vert {
+  /* background-color: green; */
+  display: flex;
+  flex-flow: column;
+  min-width: 50vh;
+}
+
+.cart-wrapper {
+  display: flex;
+  flex-flow: column;
+}
+
+ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+li {
+  background-color: bisque;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  gap: 2em;
+  /* justify-content: space-around; */
+}
+
+.btn {
+  color: white;
+  border-width: 0px;
+  border-radius: 5px;
+  padding: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  cursor: pointer;
+}
+
+.btn__red {
+  background-color: rgb(254, 50, 50);
+}
+
+.btn__blue {
+  background-color: rgb(10, 123, 215);
+}
+
+.btn__green {
+  background-color: rgb(16, 181, 16);
+}
+
+.btn__black {
+  background-color: black;
+  margin-left: 1vh;
+  margin-right: 1vh;
+}
+
+.checkout-btn {
+  content: center;
+  flex-grow: 1;
+}
+
+@media screen and (max-width: 730px) {
+  #app {
+    flex-direction: column;
+  }
+}
