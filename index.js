@@ -1,26 +1,40 @@
 const API = (() => {
   const URL = "http://localhost:3000";
-  const getCart = () => {
+
+  const checkFetch = (resp) => {
+    if (!resp.ok) {
+      throw new Error("response not ok");
+    }
+    return resp;
+  };
+
+  const getCart = async () => {
     // define your method to get cart data
     return fetch(`${URL}/cart`, {
       method: "GET",
       headers: {
         Accept: "application/json",
       },
-    }).then((res) => res.json());
+    })
+      .then(checkFetch)
+      .then((res) => res.json())
+      .catch((err) => console.error(err));
   };
 
-  const getInventory = () => {
+  const getInventory = async () => {
     // define your method to get inventory data
     return fetch(`${URL}/inventory`, {
       method: "GET",
       headers: {
         Accept: "application/json",
       },
-    }).then((res) => res.json());
+    })
+      .then(checkFetch)
+      .then((res) => res.json())
+      .catch((err) => console.error(err));
   };
 
-  const addToCart = (cartItem) => {
+  const addToCart = async (cartItem) => {
     // define your method to add an item to cart
     return fetch(`${URL}/cart`, {
       method: "POST",
@@ -29,10 +43,13 @@ const API = (() => {
         Accept: "application/json",
       },
       body: JSON.stringify(cartItem),
-    }).then((res) => res.json());
+    })
+      .then(checkFetch)
+      .then((res) => res.json())
+      .catch((err) => console.error(err));
   };
 
-  const updateCart = (id, item) => {
+  const updateCart = async (id, item) => {
     // define your method to update an item in cart
     return fetch(`${URL}/cart/${id}`, {
       method: "PUT",
@@ -41,20 +58,26 @@ const API = (() => {
         Accept: "application/json",
       },
       body: JSON.stringify(item),
-    }).then((res) => res.json());
+    })
+      .then(checkFetch)
+      .then((res) => res.json())
+      .catch((err) => console.error(err));
   };
 
-  const deleteFromCart = (id) => {
+  const deleteFromCart = async (id) => {
     // define your method to delete an item in cart
     return fetch(`${URL}/cart/${id}`, {
       method: "DELETE",
       headers: {
         Accept: "application/json",
       },
-    }).then((res) => res.json());
+    })
+      .then(checkFetch)
+      .then((res) => res.json())
+      .catch((err) => console.error(err));
   };
 
-  const checkout = () => {
+  const checkout = async () => {
     // you don't need to add anything here
     return getCart().then((data) =>
       Promise.all(data.map((item) => deleteFromCart(item.id)))
@@ -131,36 +154,37 @@ const View = (() => {
   const createBtn = () => document.createElement("button");
 
   const renderInventoryItems = (items) => {
-    // items is list of {content: item, count: val}
+    // items is list of {id: id, content: item, count: val}
     const inventoryList = document.querySelector(".inventory__item-list");
     inventoryList.innerHTML = "";
 
     items.forEach((data) => {
-      const item = data.content;
+      const id = data.id;
+      const name = data.content;
       const count = data.count;
 
       const listItem = document.createElement("li");
 
       const spanItem = document.createElement("span");
-      spanItem.innerText = item;
+      spanItem.innerText = name;
 
       const removeBtn = createBtn();
       removeBtn.innerText = "-";
-      removeBtn.id = `remove-${item}`;
+      removeBtn.id = `remove-${id}`;
       removeBtn.className = `btn btn__red`;
 
       const spanCounter = document.createElement("span");
       spanCounter.innerText = `${count}`;
-      spanCounter.id = `counter-${item}`;
+      spanCounter.id = `counter-${id}`;
 
       const addBtn = createBtn();
       addBtn.innerText = "+";
-      addBtn.id = `add-${item}`;
+      addBtn.id = `add-${id}`;
       addBtn.className = `btn btn__green`;
 
       const addToCartBtn = createBtn();
       addToCartBtn.innerText = "add to cart";
-      addToCartBtn.id = `save-${item}`;
+      addToCartBtn.id = `save-${id}`;
       addToCartBtn.className = `btn btn__blue`;
 
       listItem.appendChild(spanItem);
@@ -185,7 +209,7 @@ const View = (() => {
       span.innerText = `${item.content} x ${item.count}`;
       const deleteBtn = document.createElement("button");
       deleteBtn.innerText = "delete";
-      deleteBtn.id = `delete-${item.content}`;
+      deleteBtn.id = `delete-${item.id}`;
       deleteBtn.className = `btn btn__blue`;
 
       listItem.appendChild(span);
@@ -205,7 +229,7 @@ const Controller = ((model, view) => {
   // implement your logic for Controller
   const state = new model.State();
   const inventoryContainer = document.querySelector(".inventory-container");
-  const cartContainer = document.querySelector(".cart__item-list");
+  const cartContainer = document.querySelector(".cart-wrapper");
 
   const init = () => {
     // set up subscriber functions
@@ -242,14 +266,14 @@ const Controller = ((model, view) => {
       }
       const tmp = element.id.split("-");
       const action = tmp[0];
-      const itemName = tmp[1];
+      const itemId = tmp[1];
 
       // find item in state's inventory list and
       // get current item count and index
       let count;
       let inventoryIndex;
       for (let i = 0; i < state.inventory.length; i++) {
-        if (state.inventory[i].content === itemName) {
+        if (`${state.inventory[i].id}` === itemId) {
           count = state.inventory[i].count;
           inventoryIndex = i;
           break;
@@ -287,37 +311,36 @@ const Controller = ((model, view) => {
 
   const handleAddToCart = (inventoryIndex) => {
     //  just update cart in state, callback will automatically sync with db.
-    const itemName = state.inventory[inventoryIndex].content;
-    const cartIndex = state.cart.findIndex((item) => item.content === itemName);
+    const itemId = state.inventory[inventoryIndex].id;
+    const cartIndex = state.cart.findIndex((item) => item.id === itemId);
 
     if (cartIndex === -1) {
       // not in cart yet
-      // add inventory count to cart count for this item
       const itemPtr = state.inventory[inventoryIndex];
-      // const newItem = Object.create(itemPtr); // shallow copy
-      const newItem = {
-        ...itemPtr,
-      };
-      state.cart.push(newItem);
-      state.cart = state.cart; // trigger callback (view)
-
+      const itemCopy = { ...itemPtr };
       // add to DB
-      model.addToCart(newItem);
+      model.addToCart(itemCopy).then(() => {
+        // add inventory count to cart count for this item
+        state.cart.push(itemCopy);
+        state.cart = state.cart; // trigger callback (view)
+      });
     } else {
-      // update item in cart
       const countToAdd = state.inventory[inventoryIndex].count;
       const itemPtr = state.cart[cartIndex];
-      itemPtr.count += countToAdd;
-      state.cart = state.cart; // trigger callback (view)
-
+      const itemCopy = { ...itemPtr };
+      itemCopy.count += countToAdd;
       // update item in DB
-      model.updateCart(itemPtr.id, itemPtr);
+      model.updateCart(itemCopy.id, itemCopy).then(() => {
+        // update item in cart
+        state.cart[cartIndex] = itemCopy;
+        state.cart = state.cart; // trigger callback (view)
+      });
     }
   };
 
   const handleCartEvents = () => {
     // setup event listener on cart wrapper
-    document.querySelector(".cart-wrapper").addEventListener("click", (e) => {
+    cartContainer.addEventListener("click", (e) => {
       const element = e.target;
 
       if (element.nodeName !== "BUTTON") {
@@ -328,26 +351,30 @@ const Controller = ((model, view) => {
       if (tmp.length === 1) {
         // checkout button
         // clear cart and sync with db
-        state.cart = [];
-        model.checkout();
+        model.checkout().then(() => (state.cart = []));
         return;
       }
 
       // delete button
       // delete just the item from db
-      const itemName = tmp[1];
+      const itemId = tmp[1];
 
       // find id (in hindsight, should have used id in the id attribute.)
       const cartItemIndex = state.cart.findIndex(
-        (item) => item.content === itemName
+        (item) => `${item.id}` === itemId
       );
+      if (cartItemIndex === -1) {
+        alert("couldn't find that item in cart");
+        return;
+      }
       const cartItemId = state.cart[cartItemIndex].id;
-      // update state (and view)
-      state.cart.splice(cartItemIndex, 1);
-      state.cart = state.cart; // trigger view callback
 
       // update db
-      model.deleteFromCart(cartItemId);
+      model.deleteFromCart(cartItemId).then(() => {
+        // update state (and view)
+        state.cart.splice(cartItemIndex, 1);
+        state.cart = state.cart; // trigger view callback
+      });
     });
   };
 
